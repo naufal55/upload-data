@@ -45,7 +45,9 @@ app.get(API + "/get-data/:id", (req, res) => {
   let folder = req.params.id;
   const address = "http://localhost:" + port + API + "/get-data/" + folder;
 
-  const queryInsert = `INSERT INTO tb_link(link) VALUES ('${address}');`;
+  // const dataFiles = JSON.stringify(req.body)
+  // console.log(req.body);
+  // const queryInsert = `INSERT INTO tb_link(link,data) VALUES ('${address}','${dataFiles}');`;
   const check = `SELECT link FROM tb_link where link = ('${address}');`;
 
   fs.readdir(`../${folder}`, function (err, files) {
@@ -59,22 +61,37 @@ app.get(API + "/get-data/:id", (req, res) => {
         // kondisi untuk menampilkan error query
 
         console.log(result[0]);
+        //jika sudah lebih dari sekali
         if (result[0]) {
-          res.status(400).json({
-            status: "request failed",
-            message: "API has been called please check database",
-          });
-        } else {
+          exec.query(
+            `SELECT data FROM tb_link where link = ('${address}');`,
+            function (err, nilaiResult) {
+              if (err) {
+                throw err;
+              } // kondisi untuk menampilkan error query
+              console.log(nilaiResult);
+              res.status(200).json({
+                status: "Request success",
+                nilaiResult,
+              });
+            }
+          );
+        } 
+        // jika baru pertama akses
+        else {
           res.status(200).json({
             status: "Request success",
             files,
           });
 
-          exec.query(queryInsert, function (err, result) {
-            if (err) {
-              throw err;
-            } // kondisi untuk menampilkan error query
-          });
+          exec.query(
+            `INSERT INTO tb_link(link,data) VALUES ('${address}','{${files}}');`,
+            function (err, result) {
+              if (err) {
+                throw err;
+              } // kondisi untuk menampilkan error query
+            }
+          );
         }
       });
     });
