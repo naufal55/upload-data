@@ -8,59 +8,10 @@ const path = "../datafile";
 const API = "/api/v1";
 const port = 3000;
 
-app.get(API + "/get-data/:id", (req, res) => {
-  let fileName = req.params.id;
-  const address = "localhost:" + port + API + "/get-data/" + fileName;
-  const query = `INSERT INTO link(link) VALUES ('${address}');`;
+app.post(API + "/post-data/", (req, res) => {
+  console.log(req.body);
 
-  fs.readFile(path + `/${fileName}.txt`, function (err, data) {
-    if (err) throw err;
-
-    db.connect(function (err, client, done) {
-      if (err) throw err; // kondisi untuk menampilkan error koneksi database
-
-      client.query(query, function (err, result) {
-        if (err) {
-          throw err;
-        } // kondisi untuk menampilkan error query
-        console.log(result);
-      });
-    });
-
-    res.status(200).json({
-      status: "Request success",
-      data: data.toString("utf8"),
-    });
-    console.log(data.toString("utf8"));
-  });
-});
-
-app.get(API + "/get-data", (req, res) => {
-
- const query = `SELECT * FROM link;`
-
- db.connect(function (err, client, done) {
-    if (err) throw err; // kondisi untuk menampilkan error koneksi database
-
-    client.query(query, function (err, result) {
-      if (err) {
-        throw err;
-      } // kondisi untuk menampilkan error query
-      console.log(result);
-
-      res.status(404).json({
-        status: "Request success",
-        message: result,
-      });
-    });
-  });
-
-});
-
-app.post(API + "/post-data/:id", (req, res) => {
-  let fileName = req.params.id;
-
-  fs.mkdir(path, { recursive: true }, (err) => {
+  fs.mkdir(`../${req.body.folder}`, { recursive: true }, (err) => {
     if (err) {
       res.status(400).json({
         status: "Request create folder failed",
@@ -69,8 +20,8 @@ app.post(API + "/post-data/:id", (req, res) => {
       //   return console.error(err);
     }
     fs.writeFile(
-      path + `/${fileName}.txt`,
-      `halo ini file ${fileName}`,
+      `../${req.body.folder}` + `/${req.body.file}.txt`,
+      `halo ini adalah file ${req.body.file}`,
       function (err) {
         if (err) {
           res.status(404).json({
@@ -80,13 +31,53 @@ app.post(API + "/post-data/:id", (req, res) => {
           return console.error(err);
         } else {
           res.status(200).json({
-            status: "success created file" + fileName,
+            status: `success created folder ${req.body.folder} & file ${req.body.file}`,
           });
-          console.log("files created successfully!");
+          // console.log("files created successfully!");
         }
       }
     );
-    console.log("Directory created successfully!");
+    // console.log("Directory created successfully!");
+  });
+});
+
+app.get(API + "/get-data/:id", (req, res) => {
+  let folder = req.params.id;
+  const address = "http://localhost:" + port + API + "/get-data/" + folder;
+
+  const queryInsert = `INSERT INTO tb_link(link) VALUES ('${address}');`;
+  const check = `SELECT link FROM tb_link where link = ('${address}');`;
+
+  fs.readdir(`../${folder}`, function (err, files) {
+    if (err) throw err;
+
+    db.connect(function (err, exec) {
+      if (err) throw err; // kondisi untuk menampilkan error koneksi database
+
+      exec.query(check, function (err, result) {
+        if (err) throw err;
+        // kondisi untuk menampilkan error query
+
+        console.log(result[0]);
+        if (result[0]) {
+          res.status(400).json({
+            status: "request failed",
+            message: "API has been called please check database",
+          });
+        } else {
+          res.status(200).json({
+            status: "Request success",
+            files,
+          });
+
+          exec.query(queryInsert, function (err, result) {
+            if (err) {
+              throw err;
+            } // kondisi untuk menampilkan error query
+          });
+        }
+      });
+    });
   });
 });
 
